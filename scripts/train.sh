@@ -64,7 +64,8 @@ if [ -n "$SLURM_NODELIST" ]; then
   MASTER_HOSTNAME=$(scontrol show hostname "$SLURM_NODELIST" | head -n 1)
   MASTER_ADDR=$(getent hosts "$MASTER_HOSTNAME" | awk '{ print $1 }')
   MASTER_PORT=$((10000 + 0x$(echo -n "${DATASET}/${EXP_NAME}" | md5sum | cut -c 1-4 | awk '{print $1}') % 20000))
-  DIST_URL=tcp://$MASTER_ADDR:$MASTER_PORT
+  # DIST_URL=tcp://$MASTER_ADDR:$MASTER_PORT
+  DIST_URL=tcp://127.0.0.1:$MASTER_PORT
 fi
 
 echo "Dist URL: $DIST_URL"
@@ -93,7 +94,7 @@ echo "Running code in: $CODE_DIR"
 
 
 echo " =========> RUN TASK <========="
-ulimit -n 65536
+# ulimit -n 65536
 if [ "${WEIGHT}" = "None" ]
 then
     $PYTHON "$CODE_DIR"/tools/$TRAIN_CODE \
