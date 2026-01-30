@@ -22,3 +22,6 @@ from .shapenet_part import ShapeNetPartDataset
 
 # dataloader
 from .dataloader import MultiDatasetDataloader
+
+# pair reward
+from .pair_reward import PairRewardDataset

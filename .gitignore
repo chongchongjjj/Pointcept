@@ -12,5 +12,7 @@ outputs/
 .vscode
 .idea
 */.DS_Store
-**/*.out
 Dockerfile
+*.out
+*.err
+data
