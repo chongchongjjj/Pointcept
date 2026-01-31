@@ -62,7 +62,7 @@ model = dict(
 )
 
 # scheduler settings (can be tuned)
-epoch = 300
+epoch = 150
 eval_epoch = 300  # total training epochs (override default 100)
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
@@ -88,6 +88,7 @@ data = dict(
         val_ratio=0.1,
         test_ratio=0.0,
         split_seed=0,
+        loop=3,
         reward_abs_max=10.0,
         transform=[
             # dict(type="CenterShift", apply_z=True),
@@ -130,43 +131,5 @@ data = dict(
             ),
         ],
         test_mode=False,
-    ),
-    test=dict(
-        type=dataset_type,
-        split="test",
-        data_root=data_root,
-        val_ratio=0.1,
-        test_ratio=0.0,
-        split_seed=0,
-        reward_abs_max=10.0,
-        transform=[
-            dict(type="CenterShift", apply_z=True),
-            dict(type="NormalizeColor"),
-        ],
-        test_mode=True,
-        test_cfg=dict(
-            post_transform=[
-                dict(type="CenterShift", apply_z=False),
-                dict(type="AddGridCoord", grid_size=0.02),
-                dict(type="ToTensor"),
-                dict(
-                    type="Collect",
-                    keys=("coord", "grid_coord", "offset", "pairs", "pair_reward", "pair_offset"),
-                    feat_keys=("color", "normal"),
-                    offset_keys_dict=dict(offset="coord", pair_offset="pairs"),
-                ),
-            ],
-            aug_transform=[
-                [
-                    dict(
-                        type="RandomRotateTargetAngle",
-                        angle=[0],
-                        axis="z",
-                        center=[0, 0, 0],
-                        p=1,
-                    )
-                ],
-            ],
-        ),
     ),
 )
