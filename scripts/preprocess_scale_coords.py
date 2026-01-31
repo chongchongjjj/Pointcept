@@ -27,6 +27,11 @@ def parse_args():
     parser.add_argument("--dst", type=Path, help="Destination root. If omitted and --inplace is set, modifies src.")
     parser.add_argument("--scale", type=float, required=True, help="Scale factor to multiply coordinates.")
     parser.add_argument(
+        "--center",
+        action="store_true",
+        help="After scaling, subtract each asset's bbox center ( (min+max)/2 ) to center coords.",
+    )
+    parser.add_argument(
         "--inplace",
         action="store_true",
         help="Overwrite coord.npy in src. If set, --dst is ignored and backup can be made with --backup-suffix.",
@@ -88,9 +93,13 @@ def main():
 
         coord = np.load(coord_path)
         coord = coord.astype(np.float32) * args.scale
+        if args.center:
+            mn = coord.min(axis=0)
+            mx = coord.max(axis=0)
+            center = (mn + mx) / 2.0
+            coord = coord - center
         np.save(out_coord, coord)
 
 
 if __name__ == "__main__":
     main()
-

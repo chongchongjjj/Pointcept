@@ -6,7 +6,7 @@ num_worker = 8
 mix_prob = 0.0
 empty_cache = False
 enable_amp = True
-evaluate = False  # disable semseg evaluator; can turn on if you add a custom eval hook
+evaluate = True  # enable pair-reward validation
 
 # slim hook list for regression
 hooks = [
@@ -14,6 +14,7 @@ hooks = [
     dict(type="ModelHook"),
     dict(type="IterationTimer", warmup_iter=2),
     dict(type="InformationWriter"),
+    dict(type="PairRewardEvaluator"),
     dict(type="CheckpointSaver", save_freq=None),
 ]
 
@@ -23,6 +24,8 @@ model = dict(
     backbone_out_channels=64,
     mlp_hidden=256,
     pair_mode="concat_diff",
+    loss_type="kl",
+    tau=2.0,
     backbone=dict(
         type="PT-v3m1",
         in_channels=6,  # color + normal; dataset will fill zeros if absent
@@ -87,12 +90,11 @@ data = dict(
         reward_abs_max=10.0,
         transform=[
             dict(type="CenterShift", apply_z=True),
-            dict(type="RandomRotate", angle=[-1, 1], axis="z", center=[0, 0, 0], p=0.5),
-            dict(type="RandomRotate", angle=[-1 / 64, 1 / 64], axis="x", p=0.5),
-            dict(type="RandomRotate", angle=[-1 / 64, 1 / 64], axis="y", p=0.5),
-            dict(type="RandomScale", scale=[0.9, 1.1]),
-            dict(type="RandomFlip", p=0.5),
-            dict(type="RandomJitter", sigma=0.005, clip=0.02),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),  # uniform small tilt
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),  # uniform small tilt
+            dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),  # uniform tiny translation
+            dict(type="RandomJitter", sigma=0.001, clip=0.005),
             dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
