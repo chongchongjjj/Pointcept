@@ -63,6 +63,7 @@ model = dict(
 
 # scheduler settings (can be tuned)
 epoch = 300
+eval_epoch = 300  # total training epochs (override default 100)
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
@@ -89,7 +90,7 @@ data = dict(
         split_seed=0,
         reward_abs_max=10.0,
         transform=[
-            dict(type="CenterShift", apply_z=True),
+            # dict(type="CenterShift", apply_z=True),
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),  # uniform small tilt
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),  # uniform small tilt
