@@ -84,6 +84,7 @@ data = dict(
         val_ratio=0.1,
         test_ratio=0.0,
         split_seed=0,
+        reward_abs_max=10.0,
         transform=[
             dict(type="CenterShift", apply_z=True),
             dict(type="RandomRotate", angle=[-1, 1], axis="z", center=[0, 0, 0], p=0.5),
@@ -112,6 +113,7 @@ data = dict(
         val_ratio=0.1,
         test_ratio=0.0,
         split_seed=0,
+        reward_abs_max=10.0,
         transform=[
             dict(type="CenterShift", apply_z=True),
             dict(type="NormalizeColor"),
@@ -133,6 +135,7 @@ data = dict(
         val_ratio=0.1,
         test_ratio=0.0,
         split_seed=0,
+        reward_abs_max=10.0,
         transform=[
             dict(type="CenterShift", apply_z=True),
             dict(type="NormalizeColor"),

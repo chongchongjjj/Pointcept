@@ -52,6 +52,8 @@ class PairRewardDataset(Dataset):
         cache: bool = False,
         ignore_index: int = -1,
         loop: int = 1,
+        reward_abs_max: float = None,
+        min_valid_pairs: int = 1,
     ):
         super().__init__()
         self.split = split
@@ -65,6 +67,8 @@ class PairRewardDataset(Dataset):
         self.ignore_index = ignore_index
         self.test_mode = test_mode
         self.loop = loop if not test_mode else 1
+        self.reward_abs_max = reward_abs_max
+        self.min_valid_pairs = min_valid_pairs
 
         self.data_list = self._get_data_list()
         logger = get_root_logger()
@@ -141,6 +145,15 @@ class PairRewardDataset(Dataset):
             reward_path = os.path.join(path, "reward.npy")
             if not (os.path.isfile(pairs_path) and os.path.isfile(reward_path)):
                 continue
+            # quick validity check to drop assets with all invalid rewards
+            reward = np.load(reward_path)
+            if self.reward_abs_max is not None:
+                mask = np.isfinite(reward) & (np.abs(reward) <= self.reward_abs_max)
+                valid_cnt = int(mask.sum())
+            else:
+                valid_cnt = int(np.isfinite(reward).sum())
+            if valid_cnt < self.min_valid_pairs:
+                continue
             # each asset is an independent sample; pairs indices are local to this asset
             name = os.path.basename(path)
             data_list.append(dict(a=path, name=name))
@@ -201,6 +214,17 @@ class PairRewardDataset(Dataset):
                 raise FileNotFoundError(f"pairs.npy or reward.npy missing in {sample['a']}")
             pairs = np.load(pairs_path)
             pair_reward = np.load(reward_path)
+        # drop invalid / extreme rewards
+        if self.reward_abs_max is not None:
+            mask = np.isfinite(pair_reward) & (np.abs(pair_reward) <= self.reward_abs_max)
+            pairs = pairs[mask]
+            pair_reward = pair_reward[mask]
+        else:
+            mask = np.isfinite(pair_reward)
+            pairs = pairs[mask]
+            pair_reward = pair_reward[mask]
+        if pairs.shape[0] < self.min_valid_pairs:
+            raise ValueError(f"Asset {sample['name']} has < {self.min_valid_pairs} valid pairs after filtering.")
         pairs = pairs.astype(np.int64)
         pair_reward = pair_reward.astype(np.float32)
         pair_offset = np.array([pairs.shape[0]], dtype=np.int64)
