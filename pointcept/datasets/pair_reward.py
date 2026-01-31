@@ -80,14 +80,10 @@ class PairRewardDataset(Dataset):
         data_list = []
         for idx, item in enumerate(raw_list):
             a_path = item["a"]
-            b_path = item["b"]
-            reward = item.get("reward", 0.0)
             name = item.get("name", f"{self.split}_{idx}")
             if not os.path.isabs(a_path):
                 a_path = os.path.join(self.data_root, a_path)
-            if not os.path.isabs(b_path):
-                b_path = os.path.join(self.data_root, b_path)
-            data_list.append(dict(a=a_path, b=b_path, reward=reward, name=name))
+            data_list.append(dict(a=a_path, name=name))
         return data_list
 
     def _auto_split(self, raw_list: List[Dict]) -> List[Dict]:
@@ -139,37 +135,15 @@ class PairRewardDataset(Dataset):
             asset_id = self._parse_asset_id(name, fallback=idx)
             id_to_path[asset_id] = path
 
-        pair_entries: Dict[Tuple[int, int], float] = {}
+        data_list = []
         for path in asset_dirs:
             pairs_path = os.path.join(path, "pairs.npy")
             reward_path = os.path.join(path, "reward.npy")
             if not (os.path.isfile(pairs_path) and os.path.isfile(reward_path)):
                 continue
-            pairs = np.load(pairs_path)
-            rewards = np.load(reward_path)
-            if len(pairs.shape) != 2 or pairs.shape[1] != 2:
-                raise ValueError(f"{pairs_path} should have shape (K, 2)")
-            if pairs.shape[0] != rewards.shape[0]:
-                raise ValueError(f"pairs and reward length mismatch in {path}")
-            for row, r in zip(pairs, rewards):
-                a_id, b_id = int(row[0]), int(row[1])
-                if a_id not in id_to_path or b_id not in id_to_path:
-                    continue
-                key = tuple(sorted((a_id, b_id)))
-                # keep first occurrence to avoid duplicates across assets
-                if key not in pair_entries:
-                    pair_entries[key] = float(r)
-
-        data_list = []
-        for idx, ((a_id, b_id), reward) in enumerate(pair_entries.items()):
-            data_list.append(
-                dict(
-                    a=id_to_path[a_id],
-                    b=id_to_path[b_id],
-                    reward=reward,
-                    name=f"{a_id}-{b_id}",
-                )
-            )
+            # each asset is an independent sample; pairs indices are local to this asset
+            name = os.path.basename(path)
+            data_list.append(dict(a=path, name=name))
         return data_list
 
     def _load_asset(self, asset_path: str) -> Dict:
@@ -208,23 +182,19 @@ class PairRewardDataset(Dataset):
     def get_data(self, idx: int) -> Dict:
         sample = self.data_list[idx % len(self.data_list)]
         data_a = self._load_asset(sample["a"])
-        data_b = self._load_asset(sample["b"])
 
-        coord = np.concatenate([data_a["coord"], data_b["coord"]], axis=0)
-        color = np.concatenate([data_a["color"], data_b["color"]], axis=0)
-        normal = np.concatenate([data_a["normal"], data_b["normal"]], axis=0)
-        segment = np.concatenate([data_a["segment"], data_b["segment"]], axis=0)
-        instance = np.concatenate([data_a["instance"], data_b["instance"]], axis=0)
+        coord = data_a["coord"]
+        color = data_a["color"]
+        normal = data_a["normal"]
+        segment = data_a["segment"]
+        instance = data_a["instance"]
 
-        len_a = data_a["coord"].shape[0]
-        len_b = data_b["coord"].shape[0]
-        offset = np.array([len_a, len_a + len_b], dtype=np.int64)
+        len_a = coord.shape[0]
+        offset = np.array([len_a], dtype=np.int64)
 
-        # pairs and rewards belong to asset A only (per-asset vertex indices)
         pairs = data_a.get("pairs")
         pair_reward = data_a.get("pair_reward", None)
         if pairs is None:
-            # try load pairs/reward from asset A folder
             pairs_path = os.path.join(sample["a"], "pairs.npy")
             reward_path = os.path.join(sample["a"], "reward.npy")
             if not (os.path.isfile(pairs_path) and os.path.isfile(reward_path)):
