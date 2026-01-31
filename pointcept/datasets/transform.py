@@ -833,11 +833,11 @@ class ElasticDistortion(object):
 
     def __call__(self, data_dict):
         if "coord" in data_dict.keys() and self.distortion_params is not None:
-        if random.random() < 0.95:
-            for granularity, magnitude in self.distortion_params:
-                data_dict["coord"] = self.elastic_distortion(
-                    data_dict["coord"], granularity, magnitude
-                )
+            if random.random() < 0.95:
+                for granularity, magnitude in self.distortion_params:
+                    data_dict["coord"] = self.elastic_distortion(
+                        data_dict["coord"], granularity, magnitude
+                    )
         return data_dict
 
 
