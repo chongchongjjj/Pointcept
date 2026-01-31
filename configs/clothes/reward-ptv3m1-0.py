@@ -93,6 +93,7 @@ data = dict(
             dict(type="RandomFlip", p=0.5),
             dict(type="RandomJitter", sigma=0.005, clip=0.02),
             dict(type="NormalizeColor"),
+            dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
@@ -114,6 +115,7 @@ data = dict(
         transform=[
             dict(type="CenterShift", apply_z=True),
             dict(type="NormalizeColor"),
+            dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
@@ -139,6 +141,7 @@ data = dict(
         test_cfg=dict(
             post_transform=[
                 dict(type="CenterShift", apply_z=False),
+                dict(type="AddGridCoord", grid_size=0.02),
                 dict(type="ToTensor"),
                 dict(
                     type="Collect",

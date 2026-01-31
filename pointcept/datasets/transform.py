@@ -833,11 +833,44 @@ class ElasticDistortion(object):
 
     def __call__(self, data_dict):
         if "coord" in data_dict.keys() and self.distortion_params is not None:
-            if random.random() < 0.95:
-                for granularity, magnitude in self.distortion_params:
-                    data_dict["coord"] = self.elastic_distortion(
-                        data_dict["coord"], granularity, magnitude
-                    )
+        if random.random() < 0.95:
+            for granularity, magnitude in self.distortion_params:
+                data_dict["coord"] = self.elastic_distortion(
+                    data_dict["coord"], granularity, magnitude
+                )
+        return data_dict
+
+
+@TRANSFORMS.register_module()
+class AddGridCoord(object):
+    """
+    Compute grid_coord without sampling/downsampling.
+
+    This keeps point order/indices intact (important for paired rewards),
+    while still providing grid_coord required by PT-v3 backbones.
+    """
+
+    def __init__(self, grid_size=0.02, align_min=True):
+        self.grid_size = grid_size
+        self.align_min = align_min
+
+    def __call__(self, data_dict):
+        assert "coord" in data_dict, "AddGridCoord needs 'coord' in data_dict"
+        grid_coord = np.floor(data_dict["coord"] / self.grid_size).astype(np.int32)
+        if self.align_min:
+            grid_coord -= grid_coord.min(axis=0)
+        data_dict["grid_coord"] = grid_coord
+        if "index_valid_keys" not in data_dict:
+            data_dict["index_valid_keys"] = [
+                "coord",
+                "color",
+                "normal",
+                "strength",
+                "segment",
+                "instance",
+            ]
+        if "grid_coord" not in data_dict["index_valid_keys"]:
+            data_dict["index_valid_keys"].append("grid_coord")
         return data_dict
 
 
