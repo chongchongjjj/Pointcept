@@ -24,8 +24,9 @@ class PairRewardPTv3(nn.Module):
         backbone_out_channels=64,
         mlp_hidden=256,
         pair_mode="concat_diff",  # concat [f0, f1, f0-f1]
-        loss_type="kl",  # "kl" or "l1"
+        loss_type="kl",  # "kl" or "l1" or "pair_rank"
         tau=2.0,
+        rank_mse_weight=0.1,
     ):
         super().__init__()
         self.backbone = MODELS.build(backbone)
@@ -33,6 +34,7 @@ class PairRewardPTv3(nn.Module):
         self.pair_mode = pair_mode
         self.loss_type = loss_type
         self.tau = tau
+        self.rank_mse_weight = rank_mse_weight
 
         if pair_mode == "concat_diff":
             head_in_dim = backbone_out_channels * 3
@@ -108,6 +110,68 @@ class PairRewardPTv3(nn.Module):
                 pair_reward = pair_reward.squeeze(-1)
             loss = F.l1_loss(pred, pair_reward)
             return dict(loss=loss, pred_mean=pred.mean())
+
+        if self.loss_type == "pair_rank":
+            if not isinstance(pair_reward, torch.Tensor):
+                pair_reward = torch.tensor(pair_reward, device=pred.device, dtype=pred.dtype)
+            if pair_reward.ndim > 1:
+                pair_reward = pair_reward.squeeze(-1)
+            if pair_offset is None:
+                raise ValueError("pair_offset is required to align pairs with points.")
+
+            pair_offset_full = torch.cat(
+                [pair_offset.new_zeros(1), pair_offset], dim=0
+            )  # (B+1)
+
+            rank_loss_sum = pred.new_zeros(1)
+            mse_loss_sum = pred.new_zeros(1)
+            count_rank_assets = 0
+            count_assets = 0
+
+            for i in range(pair_offset_full.numel() - 1):
+                p_start = pair_offset_full[i].item()
+                p_end = pair_offset_full[i + 1].item()
+                if p_end <= p_start:
+                    continue
+
+                pred_i = pred[p_start:p_end]
+                target_i = pair_reward[p_start:p_end]
+                count_assets += 1
+
+                # matrix-based pairwise ranking
+                if pred_i.numel() > 1:
+                    diff_pred = pred_i.unsqueeze(1) - pred_i.unsqueeze(0)  # (k, k)
+                    diff_target = target_i.unsqueeze(1) - target_i.unsqueeze(0)
+                    sign = torch.sign(diff_target)
+                    upper_mask = torch.triu(
+                        torch.ones_like(sign, dtype=torch.bool), diagonal=1
+                    )
+                    sign = sign[upper_mask]
+                    diff_pred = diff_pred[upper_mask]
+
+                    non_zero = sign != 0
+                    sign = sign[non_zero]
+                    diff_pred = diff_pred[non_zero]
+
+                    if sign.numel() > 0:
+                        # softplus(-s * delta) is logistic pairwise loss
+                        rank_loss_sum = rank_loss_sum + F.softplus(-sign * diff_pred).mean()
+                        count_rank_assets += 1
+
+                mse_loss_sum = mse_loss_sum + F.mse_loss(pred_i, target_i)
+
+            if count_rank_assets == 0:
+                rank_loss = pred.sum() * 0
+            else:
+                rank_loss = rank_loss_sum / count_rank_assets
+
+            if count_assets == 0:
+                mse_loss = pred.sum() * 0
+            else:
+                mse_loss = mse_loss_sum / count_assets
+
+            loss = rank_loss + self.rank_mse_weight * mse_loss
+            return dict(loss=loss, rank_loss=rank_loss, mse_loss=mse_loss, pred_mean=pred.mean())
 
         # KL-based distribution matching per asset (loss_type == "kl")
         if not isinstance(pair_reward, torch.Tensor):

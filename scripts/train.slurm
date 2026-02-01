@@ -14,4 +14,4 @@ conda init bash
 source ~/.bashrc
 conda activate pointcept
 cd /public/home/202420116260/Project/Pointcept
-sh scripts/train.sh -g 1 -d clothes -c reward-ptv3m1-0 -n reward-ptv3m1-0
+sh scripts/train.sh -g 1 -d clothes -c reward-ptv3m1-rank -n reward-ptv3m1-rank
