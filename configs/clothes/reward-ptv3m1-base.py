@@ -1,14 +1,13 @@
 _base_ = ["../_base_/default_runtime.py"]
 
-# misc custom setting
-batch_size = 32  # total across all GPUs (fits 80G, effective batch↑)
+# misc
+batch_size = 32
 num_worker = 8
 mix_prob = 0.0
 empty_cache = False
 enable_amp = True
-evaluate = True  # enable pair-reward validation
+evaluate = True
 
-# slim hook list for regression
 hooks = [
     dict(type="CheckpointLoader"),
     dict(type="ModelHook"),
@@ -18,7 +17,7 @@ hooks = [
     dict(type="CheckpointSaver", save_freq=None),
 ]
 
-# model settings
+# model default (override loss/extra params in child configs)
 model = dict(
     type="PairRewardPTv3",
     backbone_out_channels=32,
@@ -28,7 +27,7 @@ model = dict(
     tau=2.0,
     backbone=dict(
         type="PT-v3m1",
-        in_channels=6,  # color + normal; dataset will fill zeros if absent
+        in_channels=3,  # normal only
         order=("z", "z-trans", "hilbert", "hilbert-trans"),
         stride=(2, 2, 2, 2),
         enc_depths=(2, 2, 2, 4, 2),
@@ -61,13 +60,13 @@ model = dict(
     ),
 )
 
-# scheduler settings (can be tuned)
-epoch = 1200
-eval_epoch = 400  # keep loop=3 but 4× total steps vs 100-epoch setting
+# schedule
+epoch = 150
+eval_epoch = 50
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
-    max_lr=[0.008, 0.0008],  # scaled linearly with batch↑4x
+    max_lr=[0.008, 0.0008],
     pct_start=0.05,
     anneal_strategy="cos",
     div_factor=10.0,
@@ -75,7 +74,7 @@ scheduler = dict(
 )
 param_dicts = [dict(keyword="block", lr=0.0002)]
 
-# dataset settings
+# dataset
 dataset_type = "PairRewardDataset"
 data_root = "data/clothes"
 
@@ -90,28 +89,26 @@ data = dict(
         split_seed=0,
         loop=3,
         reward_abs_max=10.0,
-        pair_subsample_ratio=0.2,  # sample 20% of pairs per asset each epoch to reduce memorization
-        pair_subsample_max=4096,   # hard cap on pairs per asset
+        pair_subsample_ratio=0.2,
+        pair_subsample_max=4096,
         transform=[
             # dict(type="CenterShift", apply_z=True),
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),  # uniform small tilt
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),  # uniform small tilt
-            dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),  # uniform tiny translation
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
+            dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),
             dict(type="RandomJitter", sigma=0.002, clip=0.005),
-            dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
                 keys=("coord", "grid_coord", "offset", "pairs", "pair_reward", "pair_offset"),
-                feat_keys=("color", "normal"),
+                feat_keys=("normal",),
                 offset_keys_dict=dict(offset="coord", pair_offset="pairs"),
             ),
         ],
         test_mode=False,
     ),
-    # You can enable val/test by providing corresponding json manifests.
     val=dict(
         type=dataset_type,
         split="val",
@@ -122,13 +119,12 @@ data = dict(
         reward_abs_max=10.0,
         transform=[
             # dict(type="CenterShift", apply_z=True),
-            dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
                 keys=("coord", "grid_coord", "offset", "pairs", "pair_reward", "pair_offset"),
-                feat_keys=("color", "normal"),
+                feat_keys=("normal",),
                 offset_keys_dict=dict(offset="coord", pair_offset="pairs"),
             ),
         ],
