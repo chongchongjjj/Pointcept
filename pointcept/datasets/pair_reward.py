@@ -54,6 +54,8 @@ class PairRewardDataset(Dataset):
         loop: int = 1,
         reward_abs_max: float = None,
         min_valid_pairs: int = 1,
+        pair_subsample_ratio: float = None,
+        pair_subsample_max: int = None,
     ):
         super().__init__()
         self.split = split
@@ -69,6 +71,8 @@ class PairRewardDataset(Dataset):
         self.loop = loop if not test_mode else 1
         self.reward_abs_max = reward_abs_max
         self.min_valid_pairs = min_valid_pairs
+        self.pair_subsample_ratio = pair_subsample_ratio
+        self.pair_subsample_max = pair_subsample_max
 
         self.data_list = self._get_data_list()
         logger = get_root_logger()
@@ -223,6 +227,23 @@ class PairRewardDataset(Dataset):
             mask = np.isfinite(pair_reward)
             pairs = pairs[mask]
             pair_reward = pair_reward[mask]
+
+        # optional subsampling (train split only) to combat overfitting to dense pair permutations
+        if (self.split == "train") and not self.test_mode:
+            n_pairs = pairs.shape[0]
+            target_n = n_pairs
+            if self.pair_subsample_ratio is not None:
+                target_n = min(
+                    target_n,
+                    max(self.min_valid_pairs, int(np.ceil(n_pairs * self.pair_subsample_ratio))),
+                )
+            if self.pair_subsample_max is not None:
+                target_n = min(target_n, self.pair_subsample_max)
+            if target_n < n_pairs:
+                idx = np.random.choice(n_pairs, target_n, replace=False)
+                pairs = pairs[idx]
+                pair_reward = pair_reward[idx]
+
         if pairs.shape[0] < self.min_valid_pairs:
             raise ValueError(f"Asset {sample['name']} has < {self.min_valid_pairs} valid pairs after filtering.")
         pairs = pairs.astype(np.int64)
