@@ -24,7 +24,7 @@ model = dict(
     backbone_out_channels=32,
     mlp_hidden=128,
     pair_mode="concat_diff",
-    loss_type="kl",
+    loss_type="l1",
     tau=2.0,
     backbone=dict(
         type="PT-v3m1",
@@ -62,8 +62,8 @@ model = dict(
 )
 
 # scheduler settings (can be tuned)
-epoch = 150
-eval_epoch = 50  # total training epochs (override default 100)
+epoch = 300
+eval_epoch = 100  # total training epochs (override default 100)
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
@@ -96,7 +96,7 @@ data = dict(
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),  # uniform small tilt
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),  # uniform small tilt
             dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),  # uniform tiny translation
-            dict(type="RandomJitter", sigma=0.001, clip=0.005),
+            dict(type="RandomJitter", sigma=0.002, clip=0.005),
             dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),

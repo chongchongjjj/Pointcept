@@ -100,7 +100,7 @@ data = dict(
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),  # uniform small tilt
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),  # uniform small tilt
             dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),  # uniform tiny translation
-            dict(type="RandomJitter", sigma=0.001, clip=0.005),
+            dict(type="RandomJitter", sigma=0.002, clip=0.005),
             dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
