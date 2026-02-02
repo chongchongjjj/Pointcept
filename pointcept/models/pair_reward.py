@@ -27,6 +27,7 @@ class PairRewardPTv3(nn.Module):
         loss_type="kl",  # "kl" or "l1" or "pair_rank"
         tau=2.0,
         rank_mse_weight=0.1,
+        rank_reg_loss="mse",  # "mse" or "mae"
     ):
         super().__init__()
         self.backbone = MODELS.build(backbone)
@@ -35,6 +36,9 @@ class PairRewardPTv3(nn.Module):
         self.loss_type = loss_type
         self.tau = tau
         self.rank_mse_weight = rank_mse_weight
+        if rank_reg_loss not in ["mse", "mae"]:
+            raise ValueError(f"Unknown rank_reg_loss: {rank_reg_loss}")
+        self.rank_reg_loss = rank_reg_loss
 
         if pair_mode == "concat_diff":
             head_in_dim = backbone_out_channels * 3
@@ -158,7 +162,11 @@ class PairRewardPTv3(nn.Module):
                         rank_loss_sum = rank_loss_sum + F.softplus(-sign * diff_pred).mean()
                         count_rank_assets += 1
 
-                mse_loss_sum = mse_loss_sum + F.mse_loss(pred_i, target_i)
+                if self.rank_reg_loss == "mae":
+                    reg_loss = F.l1_loss(pred_i, target_i)
+                else:
+                    reg_loss = F.mse_loss(pred_i, target_i)
+                mse_loss_sum = mse_loss_sum + reg_loss
 
             if count_rank_assets == 0:
                 rank_loss = pred.sum() * 0

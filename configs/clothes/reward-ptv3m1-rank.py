@@ -21,11 +21,12 @@ hooks = [
 # model settings
 model = dict(
     type="PairRewardPTv3",
-    backbone_out_channels=64,
-    mlp_hidden=256,
+    backbone_out_channels=48,
+    mlp_hidden=192,
     pair_mode="concat_diff",
     loss_type="pair_rank",  # new pairwise ranking + MSE hybrid
     rank_mse_weight=0.1,
+    rank_reg_loss="mae",  # use MAE for regression term inside pair_rank
     tau=2.0,
     backbone=dict(
         type="PT-v3m1",
@@ -33,11 +34,11 @@ model = dict(
         order=("z", "z-trans", "hilbert", "hilbert-trans"),
         stride=(2, 2, 2, 2),
         enc_depths=(2, 2, 2, 6, 2),
-        enc_channels=(32, 64, 128, 256, 512),
+        enc_channels=(24, 48, 96, 192, 384),
         enc_num_head=(2, 4, 8, 16, 32),
         enc_patch_size=(256, 256, 256, 256, 256),
         dec_depths=(2, 2, 2, 2),
-        dec_channels=(64, 64, 128, 256),
+        dec_channels=(48, 48, 96, 192),
         dec_num_head=(4, 4, 8, 16),
         dec_patch_size=(256, 256, 256, 256),
         mlp_ratio=4,
@@ -63,8 +64,8 @@ model = dict(
 )
 
 # scheduler settings (can be tuned)
-epoch = 150
-eval_epoch = 300  # total training epochs (override default 100)
+epoch = 300
+eval_epoch = 100  # total training epochs (override default 100)
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
