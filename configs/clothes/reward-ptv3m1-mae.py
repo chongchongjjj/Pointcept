@@ -1,7 +1,7 @@
 _base_ = ["../_base_/default_runtime.py"]
 
 # misc custom setting
-batch_size = 8  # total across all GPUs (reduce to fit 1x24GB)
+batch_size = 32  # total across all GPUs (fits 80G, effective batch↑)
 num_worker = 8
 mix_prob = 0.0
 empty_cache = False
@@ -62,12 +62,12 @@ model = dict(
 )
 
 # scheduler settings (can be tuned)
-epoch = 300
-eval_epoch = 100  # total training epochs (override default 100)
+epoch = 1200
+eval_epoch = 400  # keep loop=3 but 4× total steps vs 100-epoch setting
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
-    max_lr=[0.002, 0.0002],
+    max_lr=[0.008, 0.0008],  # scaled linearly with batch↑4x
     pct_start=0.05,
     anneal_strategy="cos",
     div_factor=10.0,
@@ -90,6 +90,8 @@ data = dict(
         split_seed=0,
         loop=3,
         reward_abs_max=10.0,
+        pair_subsample_ratio=0.2,  # sample 20% of pairs per asset each epoch to reduce memorization
+        pair_subsample_max=4096,   # hard cap on pairs per asset
         transform=[
             # dict(type="CenterShift", apply_z=True),
             dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
@@ -119,7 +121,7 @@ data = dict(
         split_seed=0,
         reward_abs_max=10.0,
         transform=[
-            dict(type="CenterShift", apply_z=True),
+            # dict(type="CenterShift", apply_z=True),
             dict(type="NormalizeColor"),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),

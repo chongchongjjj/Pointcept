@@ -36,6 +36,10 @@ class PairRewardEvaluator(HookBase):
         self.trainer.model.eval()
         loss_sum = 0.0
         count = 0
+        rank_sum = 0.0
+        rank_count = 0
+        reg_sum = 0.0
+        reg_count = 0
         with torch.no_grad():
             for i, input_dict in enumerate(self.trainer.val_loader):
                 if self.max_batches is not None and i >= self.max_batches:
@@ -47,6 +51,13 @@ class PairRewardEvaluator(HookBase):
                 loss = output_dict["loss"].detach()
                 loss_sum += loss.item()
                 count += 1
+                if "rank_loss" in output_dict:
+                    rank_sum += output_dict["rank_loss"].detach().item()
+                    rank_count += 1
+                if "mse_loss" in output_dict or "reg_loss" in output_dict:
+                    reg_key = "mse_loss" if "mse_loss" in output_dict else "reg_loss"
+                    reg_sum += output_dict[reg_key].detach().item()
+                    reg_count += 1
                 self.trainer.logger.info(
                     "Val: [{iter}/{max_iter}] Loss {loss:.4f}".format(
                         iter=i + 1,
@@ -56,11 +67,22 @@ class PairRewardEvaluator(HookBase):
                 )
 
         loss_avg = loss_sum / max(count, 1)
+        rank_avg = rank_sum / max(rank_count, 1) if rank_count > 0 else None
+        reg_avg = reg_sum / max(reg_count, 1) if reg_count > 0 else None
         current_epoch = self.trainer.epoch + 1
         if self.trainer.writer is not None:
             self.trainer.writer.add_scalar("val/loss", loss_avg, current_epoch)
+            if rank_avg is not None:
+                self.trainer.writer.add_scalar("val/rank_loss", rank_avg, current_epoch)
+            if reg_avg is not None:
+                self.trainer.writer.add_scalar("val/reg_loss", reg_avg, current_epoch)
             if self.trainer.cfg.enable_wandb and comm.is_main_process():
-                wandb.log({"Epoch": current_epoch, "val/loss": loss_avg}, step=wandb.run.step)
+                log_dict = {"Epoch": current_epoch, "val/loss": loss_avg}
+                if rank_avg is not None:
+                    log_dict["val/rank_loss"] = rank_avg
+                if reg_avg is not None:
+                    log_dict["val/reg_loss"] = reg_avg
+                wandb.log(log_dict, step=wandb.run.step)
 
         # higher metric is better; use negative loss to maximize
         self.trainer.comm_info["current_metric_value"] = -loss_avg
