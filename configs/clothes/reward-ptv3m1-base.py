@@ -66,11 +66,13 @@ eval_epoch = 50
 optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
-    max_lr=[0.008, 0.0008],
+    max_lr=[0.005, 0.0005],
     pct_start=0.05,
     anneal_strategy="cos",
-    div_factor=10.0,
-    final_div_factor=1000.0,
+    # div_factor=10.0,
+    # final_div_factor=1000.0,
+    div_factor=1.0,
+    final_div_factor=1.0,
 )
 param_dicts = [dict(keyword="block", lr=0.0002)]
 
