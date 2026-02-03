@@ -460,4 +460,6 @@ class SpUNetNoSkipBase(nn.Module):
             x = self.dec[s](x)
 
         x = self.final(x)
+        # cache final sparse indices for downstream heads that need point-level alignment
+        self._last_indices = x.indices
         return x.features

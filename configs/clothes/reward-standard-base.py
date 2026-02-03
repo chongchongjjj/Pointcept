@@ -1,5 +1,14 @@
 _base_ = ["../_base_/default_runtime.py"]
 
+# ---- tunable knobs (change in child configs or via cli) ----
+loss_type = "l1"              # "l1" or "pair_rank"
+rank_mse_weight = 0.05         # used when loss_type == "pair_rank"
+rank_reg_loss = "mae"          # "mae" or "mse"
+pair_subsample_ratio = 0.2
+learning_rate = 0.002
+backbone_out_channels = 32
+mlp_hidden = 128
+
 # misc
 batch_size = 32
 num_worker = 8
@@ -17,64 +26,32 @@ hooks = [
     dict(type="CheckpointSaver", save_freq=None),
 ]
 
-# model default (override loss/extra params in child configs)
+# model (backbone is supplied/overridden by child configs)
 model = dict(
     type="PairRewardPTv3",
-    backbone_out_channels=32,
-    mlp_hidden=128,
+    backbone_out_channels=backbone_out_channels,
+    mlp_hidden=mlp_hidden,
     pair_mode="concat_diff",
-    loss_type="l1",
+    loss_type=loss_type,
     tau=2.0,
-    backbone=dict(
-        type="PT-v3m1",
-        in_channels=3,  # normal only
-        order=("z", "z-trans", "hilbert", "hilbert-trans"),
-        stride=(2, 2, 2, 2),
-        enc_depths=(2, 2, 2, 4, 2),
-        enc_channels=(16, 32, 64, 128, 256),
-        enc_num_head=(2, 2, 4, 8, 16),
-        enc_patch_size=(256, 256, 256, 256, 256),
-        dec_depths=(2, 2, 2, 1),
-        dec_channels=(32, 32, 64, 128),
-        dec_num_head=(4, 4, 8, 8),
-        dec_patch_size=(256, 256, 256, 256),
-        mlp_ratio=3,
-        qkv_bias=True,
-        qk_scale=None,
-        attn_drop=0.1,
-        proj_drop=0.1,
-        drop_path=0.2,
-        shuffle_orders=True,
-        pre_norm=True,
-        enable_rpe=False,
-        enable_flash=False,
-        upcast_attention=True,
-        upcast_softmax=True,
-        enc_mode=False,
-        pdnorm_bn=False,
-        pdnorm_ln=False,
-        pdnorm_decouple=True,
-        pdnorm_adaptive=False,
-        pdnorm_affine=True,
-        pdnorm_conditions=("ScanNet", "S3DIS", "Structured3D"),
-    ),
+    rank_mse_weight=rank_mse_weight,
+    rank_reg_loss=rank_reg_loss,
+    backbone=dict(),
 )
 
 # schedule
 epoch = 150
 eval_epoch = 50
-optimizer = dict(type="AdamW", lr=0.002, weight_decay=0.05)
+optimizer = dict(type="AdamW", lr=learning_rate, weight_decay=0.05)
 scheduler = dict(
     type="OneCycleLR",
-    max_lr=[0.005, 0.0005],
+    max_lr=[learning_rate * 2.5, learning_rate * 0.25],
     pct_start=0.05,
     anneal_strategy="cos",
-    # div_factor=10.0,
-    # final_div_factor=1000.0,
     div_factor=1.0,
     final_div_factor=1.0,
 )
-param_dicts = [dict(keyword="block", lr=0.0002)]
+param_dicts = [dict(keyword="block", lr=learning_rate * 0.1)]
 
 # dataset
 dataset_type = "PairRewardDataset"
@@ -91,7 +68,7 @@ data = dict(
         split_seed=0,
         loop=3,
         reward_abs_max=10.0,
-        pair_subsample_ratio=0.2,
+        pair_subsample_ratio=pair_subsample_ratio,
         pair_subsample_max=4096,
         transform=[
             # dict(type="CenterShift", apply_z=True),
