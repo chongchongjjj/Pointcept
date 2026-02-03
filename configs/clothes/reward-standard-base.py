@@ -26,19 +26,6 @@ hooks = [
     dict(type="CheckpointSaver", save_freq=None),
 ]
 
-# model (backbone is supplied/overridden by child configs)
-model = dict(
-    type="PairRewardPTv3",
-    backbone_out_channels=backbone_out_channels,
-    mlp_hidden=mlp_hidden,
-    pair_mode="concat_diff",
-    loss_type=loss_type,
-    tau=2.0,
-    rank_mse_weight=rank_mse_weight,
-    rank_reg_loss=rank_reg_loss,
-    backbone=dict(),
-)
-
 # schedule
 epoch = 150
 eval_epoch = 50

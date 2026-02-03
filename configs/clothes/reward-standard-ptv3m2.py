@@ -1,37 +1,7 @@
 _base_ = ["reward-standard-base.py"]
 
-# PT-v3m2 (paper-recommended widths/depths)
+# PT-v3m2: only override what differs from base/defaults
 model = dict(
-    backbone_out_channels=32,
-    mlp_hidden=128,
-    backbone=dict(
-        type="PT-v3m2",
-        in_channels=3,
-        order=("z", "z-trans", "hilbert", "hilbert-trans"),
-        stride=(2, 2, 2, 2),
-        enc_depths=(2, 2, 2, 6, 2),
-        enc_channels=(16, 32, 64, 128, 256),
-        enc_num_head=(2, 4, 8, 16, 32),
-        enc_patch_size=(256, 256, 256, 256, 256),
-        dec_depths=(2, 2, 2, 2),
-        dec_channels=(32, 32, 64, 128),
-        dec_num_head=(4, 4, 8, 16),
-        dec_patch_size=(256, 256, 256, 256),
-        mlp_ratio=4,
-        qkv_bias=True,
-        qk_scale=None,
-        attn_drop=0.1,
-        proj_drop=0.1,
-        drop_path=0.2,
-        shuffle_orders=True,
-        pre_norm=True,
-        enable_rpe=False,
-        enable_flash=False,
-        upcast_attention=True,
-        upcast_softmax=True,
-        traceable=False,
-        mask_token=False,
-        enc_mode=False,
-        freeze_encoder=False,
-    ),
+    backbone_out_channels=64,  # final decoder stage output
+    backbone=dict(type="PT-v3m2"),
 )
