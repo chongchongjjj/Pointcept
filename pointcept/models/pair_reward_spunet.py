@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from pointcept.models.builder import MODELS
-from pointcept.utils.point import Point
+from pointcept.models.utils.structure import Point
 from pointcept.models.utils import offset2batch
 
 
