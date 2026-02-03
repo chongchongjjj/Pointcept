@@ -29,3 +29,4 @@ from .concerto import *
 
 # Pair reward regression
 from .pair_reward import *
+from .pair_reward_spunet import *
