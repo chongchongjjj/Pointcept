@@ -14,13 +14,7 @@ conda init bash
 source ~/.bashrc
 conda activate pointcept
 cd /public/home/202420116260/Project/Pointcept
-<<<<<<< HEAD
-# sh scripts/train.sh -g 1 -d clothes -c reward-standard-ptv3m2 -n reward-standard-ptv3m2
-sh scripts/train.sh -g 1 -d clothes -c reward-standard-ptv3m1 -n reward-standard-ptv3m1
-# sh scripts/train.sh -g 1 -d clothes -c reward-ptv3m1-mae -n reward-ptv3m1-mae-midium
-=======
 sh scripts/train.sh -g 1 -d clothes -c reward-standard-ptv3m2 -n reward-standard-ptv3m2-1
 # sh scripts/train.sh -g 1 -d clothes -c reward-standard-ptv3m1 -n reward-standard-ptv3m1
 # sh scripts/train.sh -g 1 -d clothes -c reward-standard-spunet -n reward-standard-spunet
 
->>>>>>> f15dfe2ac5362ecc99e2d357272b536ae300fb66

@@ -4,7 +4,7 @@ _base_ = ["../_base_/default_runtime.py"]
 loss_type = "l1"              # "l1" or "pair_rank"
 rank_mse_weight = 0.05         # used when loss_type == "pair_rank"
 rank_reg_loss = "mae"          # "mae" or "mse"
-pair_subsample_ratio = 0.2
+pair_subsample_ratio = 1.0
 learning_rate = 0.002
 backbone_out_channels = 32
 mlp_hidden = 128
@@ -71,12 +71,12 @@ data = dict(
         pair_subsample_ratio=pair_subsample_ratio,
         pair_subsample_max=4096,
         transform=[
-            # dict(type="CenterShift", apply_z=True),
-            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
-            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
-            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
+            dict(type="CenterShift", apply_z=True),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
             # dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),
-            # dict(type="RandomJitter", sigma=0.002, clip=0.005),
+            dict(type="RandomJitter", sigma=0.002, clip=0.005),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
@@ -97,7 +97,7 @@ data = dict(
         split_seed=0,
         reward_abs_max=10.0,
         transform=[
-            # dict(type="CenterShift", apply_z=True),
+            dict(type="CenterShift", apply_z=True),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
