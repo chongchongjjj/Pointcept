@@ -272,6 +272,7 @@ class SpUNetBase(nn.Module):
                 x = x.replace_feature(torch.cat((x.features, skip.features), dim=1))
                 x = self.dec[s](x)
 
+        self._last_indices = x.indices
         x = self.final(x)
         if self.enc_mode:
             x = x.replace_feature(

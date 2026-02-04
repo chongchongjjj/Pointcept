@@ -1,7 +1,12 @@
 _base_ = ["reward-standard-base.py"]
 
-# PT-v3m2: only override what differs from base/defaults
+# PT-v3m2: minimal overrides on top of reward-standard-base
 model = dict(
-    backbone_out_channels=64,  # final decoder stage output
-    backbone=dict(type="PT-v3m2"),
+    type="PairRewardPTv3",
+    backbone_out_channels=64,  # decoder stage 0 output dimension
+    backbone=dict(
+        type="PT-v3m1",
+        enable_flash=False,
+        in_channels=3,
+        ),
 )
