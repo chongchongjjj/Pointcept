@@ -1,5 +1,7 @@
 _base_ = ["../_base_/default_runtime.py"]
 
+seed = 0
+
 # ---- tunable knobs (change in child configs or via cli) ----
 loss_type = "l1"              # "l1" or "pair_rank"
 rank_mse_weight = 0.05         # used when loss_type == "pair_rank"
@@ -72,9 +74,9 @@ data = dict(
         pair_subsample_max=4096,
         transform=[
             dict(type="CenterShift", apply_z=True),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", p=0.5),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], center=[0,0,0], axis="z", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], center=[0,0,0], axis="x", p=0.5),
+            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], center=[0,0,0], axis="y", p=0.5),
             # dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),
             dict(type="RandomJitter", sigma=0.002, clip=0.005),
             dict(type="AddGridCoord", grid_size=0.02),
