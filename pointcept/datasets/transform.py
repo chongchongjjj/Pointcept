@@ -1016,6 +1016,70 @@ class GridSample(object):
 
 
 @TRANSFORMS.register_module()
+class PairVoxelDownsample(object):
+    """
+    Voxel downsample that keeps pair indices valid by过滤/重映射 pairs。
+
+    - 每个 voxel 只保留 1 个点（随机或首个）。
+    - 会同步裁剪 coord/normal 等 index_valid_keys。
+    - 对 pairs/pair_reward：仅保留两端都存活的配对，并把索引映射到新点号；若全部被丢弃则返回原样，避免样本失效。
+    - 偏移 offset/pair_offset 也会重算。
+
+    适用于 pair 任务，放在 AddGridCoord 之前使用，不会破坏原有配对语义。
+    """
+
+    def __init__(self, grid_size=0.02, hash_type="fnv", mode="random"):
+        self.grid_size = grid_size
+        self.hash = GridSample.fnv_hash_vec if hash_type == "fnv" else GridSample.ravel_hash_vec
+        assert mode in ["random", "first"]
+        self.mode = mode
+
+    def __call__(self, data_dict):
+        if "coord" not in data_dict:
+            return data_dict
+
+        coord = data_dict["coord"]
+        scaled_coord = coord / np.array(self.grid_size)
+        grid_coord = np.floor(scaled_coord).astype(int)
+        key = self.hash(grid_coord)
+
+        idx_sort = np.argsort(key)
+        key_sort = key[idx_sort]
+        _, start_idx, counts = np.unique(key_sort, return_index=True, return_counts=True)
+
+        if self.mode == "random":
+            pick = start_idx + np.random.randint(0, counts)
+        else:  # "first"
+            pick = start_idx
+        idx_keep = idx_sort[pick]
+
+        # build old->new index mapping
+        mapping = np.full(coord.shape[0], -1, dtype=np.int64)
+        mapping[idx_keep] = np.arange(idx_keep.shape[0], dtype=np.int64)
+
+        # remap pairs if present
+        if "pairs" in data_dict:
+            pairs = data_dict["pairs"]
+            pair_reward = data_dict.get("pair_reward")
+            mask = (mapping[pairs[:, 0]] != -1) & (mapping[pairs[:, 1]] != -1)
+            if mask.sum() == 0:
+                # avoid empty sample; fall back to original data
+                return data_dict
+            pairs = pairs[mask]
+            pairs[:, 0] = mapping[pairs[:, 0]]
+            pairs[:, 1] = mapping[pairs[:, 1]]
+            data_dict["pairs"] = pairs
+            if pair_reward is not None:
+                data_dict["pair_reward"] = pair_reward[mask]
+            data_dict["pair_offset"] = np.array([pairs.shape[0]], dtype=np.int64)
+
+        # slice all valid arrays
+        data_dict = index_operator(data_dict, idx_keep)
+        data_dict["offset"] = np.array([idx_keep.shape[0]], dtype=np.int64)
+        return data_dict
+
+
+@TRANSFORMS.register_module()
 class SphereCrop(object):
     def __init__(self, point_max=80000, sample_rate=None, mode="random"):
         self.point_max = point_max
