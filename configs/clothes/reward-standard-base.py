@@ -26,6 +26,19 @@ hooks = [
     dict(type="CheckpointSaver", save_freq=None),
 ]
 
+# model (backbone is supplied/overridden by child configs)
+model = dict(
+    type="PairRewardPTv3",
+    backbone_out_channels=backbone_out_channels,
+    mlp_hidden=mlp_hidden,
+    pair_mode="concat_diff",
+    loss_type=loss_type,
+    tau=2.0,
+    rank_mse_weight=rank_mse_weight,
+    rank_reg_loss=rank_reg_loss,
+    backbone=dict(),
+)
+
 # schedule
 epoch = 150
 eval_epoch = 50
@@ -59,11 +72,11 @@ data = dict(
         pair_subsample_max=4096,
         transform=[
             # dict(type="CenterShift", apply_z=True),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
-            dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
-            dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),
-            dict(type="RandomJitter", sigma=0.002, clip=0.005),
+            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="z", center=[0, 0, 0], p=0.5),
+            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="x", p=0.5),
+            # dict(type="RandomRotate", angle=[-3 / 180, 3 / 180], axis="y", p=0.5),
+            # dict(type="RandomShift", shift=((-0.01, 0.01), (-0.01, 0.01), (-0.01, 0.01))),
+            # dict(type="RandomJitter", sigma=0.002, clip=0.005),
             dict(type="AddGridCoord", grid_size=0.02),
             dict(type="ToTensor"),
             dict(
